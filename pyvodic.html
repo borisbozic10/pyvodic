@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PyVodič — Uči Python komande</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f14;
+  --surface: #161922;
+  --surface2: #1e2330;
+  --border: #2a3045;
+  --accent: #7c6af7;
+  --accent2: #4fd8a4;
+  --accent3: #f7a84a;
+  --accent4: #f76a6a;
+  --text: #e8eaf2;
+  --text2: #8b91a8;
+  --text3: #555d77;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+[data-theme="light"] {
+  --bg: #f2f3f8;
+  --surface: #ffffff;
+  --surface2: #eceef5;
+  --border: #d4d8e6;
+  --text: #1b1d2a;
+  --text2: #565c78;
+  --text3: #8990ad;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; }
+
+/* ── HEADER ── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(13,15,20,0.92); backdrop-filter: blur(12px);
+}
+.logo { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; }
+.logo span { color: var(--accent); }
+.nav-tabs { display: flex; gap: 4px; }
+.nav-tab {
+  padding: 6px 16px; border-radius: 8px; border: none;
+  background: transparent; color: var(--text2); font-family: var(--sans);
+  font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all .2s;
+}
+.nav-tab:hover { color: var(--text); background: var(--surface); }
+.nav-tab.active { background: var(--accent); color: #fff; }
+.stats-bar { display: flex; gap: 16px; align-items: center; }
+.stat { font-size: 0.8rem; color: var(--text2); display: flex; align-items: center; gap: 6px; }
+.stat strong { color: var(--accent2); font-family: var(--mono); }
+
+/* ── LAYOUT ── */
+.page { display: none; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* ── SEARCH ── */
+.search-wrap { position: relative; margin-bottom: 1.5rem; }
+.search-wrap input {
+  width: 100%; padding: 14px 20px 14px 50px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text); font-family: var(--sans);
+  font-size: 1rem; outline: none; transition: border .2s;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap .icon { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 1.1rem; }
+.filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.5rem; align-items: center; }
+.filter-btn {
+  padding: 5px 14px; border-radius: 99px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text2); font-family: var(--sans); font-size: 0.82rem;
+  font-weight: 600; cursor: pointer; transition: all .2s;
+}
+.filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+.filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.results-count { margin-left: auto; font-size: 0.82rem; color: var(--text3); font-family: var(--mono); }
+
+/* ── COMMAND GRID ── */
+.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.cmd-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden; cursor: pointer; transition: all .2s;
+}
+.cmd-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.cmd-card.learned { border-left: 3px solid var(--accent2); }
+.cmd-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+.cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cmd-name { font-family: var(--mono); font-size: 0.95rem; font-weight: 600; flex: 1; }
+.cmd-cat { font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+.learn-check { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border); display: flex; align-items: center; justify-content: center; transition: all .2s; flex-shrink: 0; }
+.cmd-card.learned .learn-check { background: var(--accent2); border-color: var(--accent2); color: #0d0f14; }
+.cmd-body { padding: 0 16px 14px; display: none; }
+.cmd-card.open .cmd-body { display: block; }
+.cmd-desc { font-size: 0.875rem; color: var(--text2); line-height: 1.65; margin-bottom: 12px; }
+.code-block {
+  background: #0a0c10; border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; font-family: var(--mono); font-size: 0.8rem;
+  line-height: 1.7; color: #c9d1e8; overflow-x: auto; white-space: pre;
+}
+.cmd-tip { margin-top: 10px; padding: 8px 12px; background: rgba(124,106,247,0.1); border-left: 2px solid var(--accent); border-radius: 0 8px 8px 0; font-size: 0.8rem; color: var(--text2); }
+.cmd-actions { display: flex; gap: 8px; margin-top: 12px; }
+.btn-sm { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-family: var(--sans); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all .2s; }
+.btn-sm:hover { border-color: var(--accent2); color: var(--accent2); }
+.btn-sm.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-sm.primary:hover { opacity: 0.85; }
+
+/* ── PROGRESS PAGE ── */
+.progress-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 2rem; }
+.prog-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; }
+.prog-card-title { font-size: 0.8rem; color: var(--text3); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+.prog-card-val { font-size: 2rem; font-weight: 800; font-family: var(--mono); }
+.prog-bar-wrap { margin-top: 10px; height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.prog-bar { height: 100%; border-radius: 99px; background: var(--accent); transition: width .6s ease; }
+.cat-progress { display: flex; flex-direction: column; gap: 10px; }
+.cat-prog-item { display: flex; align-items: center; gap: 12px; }
+.cat-prog-name { font-size: 0.85rem; font-weight: 600; width: 140px; flex-shrink: 0; }
+.cat-prog-bar-wrap { flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.cat-prog-bar { height: 100%; border-radius: 99px; transition: width .6s; }
+.cat-prog-num { font-family: var(--mono); font-size: 0.8rem; color: var(--text2); width: 50px; text-align: right; }
+.reset-btn { margin-top: 2rem; padding: 10px 20px; border-radius: 10px; border: 1px solid var(--accent4); background: transparent; color: var(--accent4); font-family: var(--sans); font-weight: 700; cursor: pointer; font-size: 0.9rem; transition: all .2s; }
+.reset-btn:hover { background: var(--accent4); color: #fff; }
+
+/* ── QUIZ PAGE ── */
+.quiz-wrap { max-width: 680px; margin: 0 auto; }
+.quiz-intro { text-align: center; padding: 3rem 0; }
+.quiz-intro h2 { font-size: 2rem; font-weight: 800; margin-bottom: 1rem; }
+.quiz-intro p { color: var(--text2); font-size: 1rem; line-height: 1.7; max-width: 480px; margin: 0 auto 2rem; }
+.btn-start { padding: 14px 32px; background: var(--accent); border: none; border-radius: 12px; color: #fff; font-family: var(--sans); font-size: 1rem; font-weight: 700; cursor: pointer; transition: all .2s; }
+.btn-start:hover { opacity: 0.85; transform: translateY(-1px); }
+.quiz-active { display: none; }
+.quiz-active.show { display: block; }
+.quiz-intro.hide { display: none; }
+.quiz-prog { display: flex; align-items: center; gap: 12px; margin-bottom: 2rem; }
+.quiz-prog-bar-wrap { flex: 1; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.quiz-prog-bar { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
+.quiz-num { font-family: var(--mono); font-size: 0.85rem; color: var(--text2); }
+.quiz-score-live { font-family: var(--mono); font-size: 0.85rem; color: var(--accent2); }
+.quiz-question { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+.quiz-code { background: #0a0c10; border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; font-family: var(--mono); font-size: 0.88rem; color: #c9d1e8; margin-bottom: 1.5rem; white-space: pre; overflow-x: auto; }
+.quiz-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+.quiz-opt {
+  padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text); font-family: var(--mono);
+  font-size: 0.9rem; cursor: pointer; text-align: left; transition: all .2s;
+}
+.quiz-opt:hover:not(:disabled) { border-color: var(--accent); }
+.quiz-opt.correct { border-color: var(--accent2); background: rgba(79,216,164,0.12); color: var(--accent2); }
+.quiz-opt.wrong { border-color: var(--accent4); background: rgba(247,106,106,0.12); color: var(--accent4); }
+.quiz-feedback { padding: 14px 18px; border-radius: 12px; font-size: 0.9rem; line-height: 1.6; margin-bottom: 1.5rem; display: none; }
+.quiz-feedback.show { display: block; }
+.quiz-feedback.ok { background: rgba(79,216,164,0.1); border: 1px solid var(--accent2); color: var(--accent2); }
+.quiz-feedback.err { background: rgba(247,106,106,0.1); border: 1px solid var(--accent4); color: var(--text); }
+.quiz-feedback.err strong { color: var(--accent4); }
+.btn-next { padding: 12px 28px; background: var(--accent); border: none; border-radius: 10px; color: #fff; font-family: var(--sans); font-weight: 700; cursor: pointer; font-size: 0.95rem; display: none; transition: all .2s; }
+.btn-next.show { display: inline-block; }
+.btn-next:hover { opacity: 0.85; }
+.quiz-result { text-align: center; padding: 3rem 0; display: none; }
+.quiz-result.show { display: block; }
+.quiz-result h2 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+.quiz-result .score-big { font-size: 4rem; font-weight: 800; font-family: var(--mono); color: var(--accent); margin: 1rem 0; }
+.quiz-result p { color: var(--text2); margin-bottom: 2rem; }
+
+/* ── ADD PAGE ── */
+.add-form { max-width: 680px; }
+.add-form h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 0.5rem; }
+.add-form p { color: var(--text2); font-size: 0.9rem; margin-bottom: 2rem; }
+.form-group { margin-bottom: 1.25rem; }
+.form-label { display: block; font-size: 0.82rem; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 12px 16px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px; color: var(--text);
+  font-family: var(--sans); font-size: 0.9rem; outline: none; transition: border .2s;
+}
+.form-textarea { font-family: var(--mono); font-size: 0.85rem; resize: vertical; min-height: 100px; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+.form-select { appearance: none; cursor: pointer; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btn-add { padding: 13px 28px; background: var(--accent); border: none; border-radius: 10px; color: #fff; font-family: var(--sans); font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: all .2s; }
+.btn-add:hover { opacity: 0.85; }
+.add-success { padding: 14px 18px; background: rgba(79,216,164,0.1); border: 1px solid var(--accent2); border-radius: 10px; color: var(--accent2); font-size: 0.9rem; display: none; margin-top: 1rem; }
+.add-success.show { display: block; }
+.custom-badge { font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: rgba(124,106,247,0.2); color: var(--accent); vertical-align: middle; margin-left: 6px; }
+
+/* ── EMPTY ── */
+.empty { text-align: center; padding: 4rem 0; color: var(--text3); }
+.empty span { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+
+/* ── THEME TOGGLE ── */
+.theme-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+.theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── SANDBOX PAGE ── */
+.sandbox-wrap { max-width: 820px; margin: 0 auto; }
+.sandbox-head { margin-bottom: 1.5rem; }
+.sandbox-head h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 0.4rem; }
+.sandbox-head p { color: var(--text2); font-size: 0.9rem; }
+.sandbox-editor { background: #0a0c10; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 1rem; }
+.sandbox-bar { background: var(--surface2); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+.sandbox-bar span { font-family: var(--mono); font-size: 0.78rem; color: var(--text3); }
+.sandbox-actions { display: flex; gap: 8px; }
+textarea#sandbox-code { width: 100%; background: transparent; border: none; color: #c9d1e8; font-family: var(--mono); font-size: 0.88rem; padding: 18px; outline: none; resize: vertical; min-height: 220px; line-height: 1.7; tab-size: 4; }
+.sandbox-output { background: #000; border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; font-family: var(--mono); font-size: 0.85rem; color: #7fe896; min-height: 90px; white-space: pre-wrap; line-height: 1.7; }
+.sandbox-output.err { color: var(--accent4); }
+.sandbox-snippets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 1.25rem; }
+.snippet-chip { font-family: var(--mono); font-size: 0.76rem; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all .2s; }
+.snippet-chip:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* ── BADGES PAGE ── */
+.badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.badge-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; text-align: center; transition: all .2s; }
+.badge-card.unlocked { border-color: var(--accent2); }
+.badge-card.locked { opacity: 0.4; }
+.badge-card .b-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+.badge-card .b-name { font-size: 0.85rem; font-weight: 700; margin-bottom: 4px; }
+.badge-card .b-desc { font-size: 0.74rem; color: var(--text3); line-height: 1.4; }
+.streak-banner { background: linear-gradient(135deg, rgba(124,106,247,.15), rgba(79,216,164,.1)); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 16px; margin-bottom: 1.5rem; }
+.streak-banner .si { font-size: 2.2rem; }
+.streak-banner .st { font-size: 1.6rem; font-weight: 800; font-family: var(--mono); color: var(--accent3); }
+.streak-banner .sl { font-size: 0.8rem; color: var(--text2); }
+
+/* ── SCROLL ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Py<span>Vodič</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('komande')">📚 Komande</button>
+    <button class="nav-tab" onclick="showPage('sandbox')">⚡ Sandbox</button>
+    <button class="nav-tab" onclick="showPage('kviz')">🧠 Kviz</button>
+    <button class="nav-tab" onclick="showPage('napredak')">📈 Napredak</button>
+    <button class="nav-tab" onclick="showPage('bedzevi')">🏆 Bedževi</button>
+    <button class="nav-tab" onclick="showPage('dodaj')">➕ Dodaj</button>
+  </div>
+  <div class="stats-bar">
+    <div class="stat">Naučeno: <strong id="hdr-learned">0</strong></div>
+    <div class="stat">Ukupno: <strong id="hdr-total">0</strong></div>
+    <button class="theme-btn" onclick="toggleTheme()" title="Promeni temu">🌓</button>
+  </div>
+</header>
+
+<!-- KOMANDE PAGE -->
+<div class="page active" id="page-komande">
+  <div class="search-wrap">
+    <span class="icon">🔍</span>
+    <input type="text" id="search" placeholder="Pretraži komande, objašnjenja..." oninput="renderKomande()">
+  </div>
+  <div class="filter-row">
+    <div id="filters"></div>
+    <span class="results-count" id="res-count"></span>
+  </div>
+  <div class="cmd-grid" id="cmd-grid"></div>
+</div>
+
+<!-- KVIZ PAGE -->
+<div class="page" id="page-kviz">
+  <div class="quiz-wrap">
+    <div class="quiz-intro" id="quiz-intro">
+      <h2>🧠 Testiraj znanje</h2>
+      <p>Kviz od 10 nasumičnih pitanja. Za svaku komandu moraš pogoditi šta ona radi ili koji je ispravni kod.</p>
+      <button class="btn-start" onclick="startQuiz()">Počni kviz</button>
+    </div>
+    <div class="quiz-active" id="quiz-active">
+      <div class="quiz-prog">
+        <div class="quiz-prog-bar-wrap"><div class="quiz-prog-bar" id="qpbar"></div></div>
+        <span class="quiz-num" id="qnum"></span>
+        <span class="quiz-score-live" id="qscore-live"></span>
+      </div>
+      <div class="quiz-question" id="q-question"></div>
+      <div class="quiz-code" id="q-code" style="display:none"></div>
+      <div class="quiz-options" id="q-options"></div>
+      <div class="quiz-feedback" id="q-feedback"></div>
+      <button class="btn-next" id="btn-next" onclick="nextQuestion()">Sledeće pitanje →</button>
+    </div>
+    <div class="quiz-result" id="quiz-result">
+      <h2>Kviz završen!</h2>
+      <div class="score-big" id="result-score"></div>
+      <p id="result-msg"></p>
+      <button class="btn-start" onclick="startQuiz()">Ponovi kviz</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAPREDAK PAGE -->
+<div class="page" id="page-napredak">
+  <div class="progress-grid" id="prog-grid"></div>
+  <h3 style="margin-bottom:1rem; font-size:1rem; color:var(--text2)">Napredak po kategorijama</h3>
+  <div class="cat-progress" id="cat-progress"></div>
+  <br>
+  <button class="reset-btn" onclick="resetProgress()">🗑 Resetuj napredak</button>
+</div>
+
+<!-- SANDBOX PAGE -->
+<div class="page" id="page-sandbox">
+  <div class="sandbox-wrap">
+    <div class="sandbox-head">
+      <h2>⚡ Python Sandbox</h2>
+      <p>Napiši i isprobaj Python kod direktno ovde. Podržava print(), petlje, funkcije, liste, rečnike i osnovnu logiku.</p>
+    </div>
+    <div class="sandbox-editor">
+      <div class="sandbox-bar">
+        <span>main.py</span>
+        <div class="sandbox-actions">
+          <button class="btn-sm primary" onclick="runSandbox()">▶ Pokreni</button>
+          <button class="btn-sm" onclick="document.getElementById('sandbox-code').value=''">🗑 Obriši</button>
+        </div>
+      </div>
+      <textarea id="sandbox-code" spellcheck="false">ime = "Python"
+print(f"Zdravo, {ime}!")
+
+for i in range(1, 6):
+    print(f"Broj: {i}, kvadrat: {i**2}")
+
+brojevi = [4, 8, 15, 16, 23, 42]
+parni = [b for b in brojevi if b % 2 == 0]
+print("Parni brojevi:", parni)</textarea>
+    </div>
+    <div class="sandbox-output" id="sandbox-output">Klikni ▶ Pokreni da vidiš izlaz...</div>
+    <div class="sandbox-snippets">
+      <button class="snippet-chip" onclick="loadSnippet('petlja')">🔁 For petlja</button>
+      <button class="snippet-chip" onclick="loadSnippet('funkcija')">🧩 Funkcija</button>
+      <button class="snippet-chip" onclick="loadSnippet('recnik')">📖 Rečnik</button>
+      <button class="snippet-chip" onclick="loadSnippet('uslov')">🔀 If/else</button>
+      <button class="snippet-chip" onclick="loadSnippet('lista')">📋 List comprehension</button>
+    </div>
+  </div>
+</div>
+
+<!-- BEDZEVI PAGE -->
+<div class="page" id="page-bedzevi">
+  <div class="streak-banner">
+    <div class="si">🔥</div>
+    <div>
+      <div class="st" id="streak-num">0 dana</div>
+      <div class="sl">Tvoj niz učenja — uđi svaki dan da ga produžiš</div>
+    </div>
+  </div>
+  <div class="badges-grid" id="badges-grid"></div>
+</div>
+
+<!-- DODAJ PAGE -->
+<div class="page" id="page-dodaj">
+  <div class="add-form">
+    <h2>➕ Dodaj novu komandu</h2>
+    <p>Sve komande koje dodaš čuvaju se lokalno u tvom pretraživaču i odmah se pojavljuju u listi i kvizu.</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Naziv komande *</label>
+        <input class="form-input" id="f-cmd" placeholder="npr. enumerate()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kategorija *</label>
+        <select class="form-select" id="f-cat">
+          <option value="">-- Odaberi ili upiši --</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nova kategorija (ako je nema gore)</label>
+      <input class="form-input" id="f-newcat" placeholder="npr. Asyncio">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Objašnjenje *</label>
+      <input class="form-input" id="f-desc" placeholder="Kratko objašnjenje šta komanda radi...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Primer koda *</label>
+      <textarea class="form-textarea" id="f-code" placeholder="# Napiši primer koda ovde&#10;x = enumerate([10,20,30])"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Savet (opciono)</label>
+      <input class="form-input" id="f-tip" placeholder="Korisni savet ili napomena...">
+    </div>
+    <button class="btn-add" onclick="addKomanda()">Dodaj komandu</button>
+    <div class="add-success" id="add-success">✅ Komanda je uspešno dodata! Možeš je naći u listi.</div>
+  </div>
+</div>
+
+<script>
+const CAT_COLORS = {
+  "Osnovne":       { dot:"#7c6af7", badge:"rgba(124,106,247,.18)", text:"#a89df7" },
+  "Konverzija":    { dot:"#f7a84a", badge:"rgba(247,168,74,.18)",  text:"#f7c47a" },
+  "Liste":         { dot:"#4fd8a4", badge:"rgba(79,216,164,.18)",  text:"#4fd8a4" },
+  "Stringovi":     { dot:"#f76a8a", badge:"rgba(247,106,138,.18)", text:"#f79ab0" },
+  "Fajlovi":       { dot:"#f76a6a", badge:"rgba(247,106,106,.18)", text:"#f7a0a0" },
+  "Funkcije":      { dot:"#9f7af7", badge:"rgba(159,122,247,.18)", text:"#c0a8f7" },
+  "Kontrola toka": { dot:"#4acef7", badge:"rgba(74,206,247,.18)",  text:"#7adef7" },
+  "Moduli":        { dot:"#8b91a8", badge:"rgba(139,145,168,.18)", text:"#b0b5c8" },
+  "OOP":           { dot:"#f7c44a", badge:"rgba(247,196,74,.18)",  text:"#f7d47a" },
+  "Funkcionalno":  { dot:"#6af7b8", badge:"rgba(106,247,184,.18)", text:"#9af7cc" },
+  "Rečnici":       { dot:"#c478ff", badge:"rgba(196,120,255,.18)", text:"#d6a8ff" },
+  "Greške":        { dot:"#ff7a59", badge:"rgba(255,122,89,.18)",  text:"#ffa68c" },
+  "Regex":         { dot:"#5ad1d1", badge:"rgba(90,209,209,.18)",  text:"#8de5e5" },
+  "Iteratori":     { dot:"#e8c14a", badge:"rgba(232,193,74,.18)",  text:"#f0d57a" },
+  "Datum/vreme":   { dot:"#7ad1f7", badge:"rgba(122,209,247,.18)", text:"#a8e0f7" },
+};
+function catColor(cat) {
+  return CAT_COLORS[cat] || { dot:"#7c6af7", badge:"rgba(124,106,247,.18)", text:"#a89df7" };
+}
+
+const DEFAULT_DATA = [
+  { cmd:"print()", cat:"Osnovne", desc:"Ispisuje vrednost na ekran. Može da štampa tekst, brojeve, promenljive i kombinacije.", code:'print("Zdravo svete!")\nprint("Zbir:", 3 + 5)\nprint(f"Ime: {ime}, God: {god}")', tip:"Koristi f-string za elegantno formatiranje." },
+  { cmd:"input()", cat:"Osnovne", desc:"Čeka da korisnik unese tekst. Uvek vraća string — konvertuj ako trebaš broj.", code:'ime = input("Unesi ime: ")\ngod = int(input("Unesi godine: "))', tip:"Bez int() ili float(), sve je string!" },
+  { cmd:"len()", cat:"Osnovne", desc:"Vraća dužinu stringa, liste, tuple, dictionary i ostalih kolekcija.", code:'print(len("Python"))    # 6\nprint(len([1, 2, 3]))  # 3', tip:"Radi na svim iterabilnim objektima." },
+  { cmd:"type()", cat:"Osnovne", desc:"Vraća tip podatka promenljive. Korisno za debagovanje.", code:'print(type(42))        # <class int>\nprint(type("tekst"))   # <class str>', tip:"Kombiniraj sa isinstance() za proveru tipa." },
+  { cmd:"range()", cat:"Osnovne", desc:"Generiše niz celih brojeva. Najčešće se koristi u for petljama.", code:'for i in range(5):         # 0 1 2 3 4\n    print(i)\nfor i in range(2, 10, 2): # 2 4 6 8\n    print(i)', tip:"Stop vrednost nije uključena u niz." },
+  { cmd:"int() / float() / str()", cat:"Konverzija", desc:"Konvertuju vrednosti između tipova: int za ceo broj, float za decimalni, str za tekst.", code:'x = int("42")       # 42\ny = float("3.14")   # 3.14\nz = str(100)        # "100"', tip:"int('3.7') baca grešku — koristi int(float('3.7'))." },
+  { cmd:"list() / tuple() / set()", cat:"Konverzija", desc:"Konvertuju iterabilne objekte. Set automatski uklanja duplikate.", code:'l = list("abc")    # ["a","b","c"]\ns = set([1,1,2,3]) # {1, 2, 3}', tip:"set() je odlično za uklanjanje duplikata." },
+  { cmd:"dict()", cat:"Konverzija", desc:"Pravi rečnik iz parova ključ=vrednost ili liste torki.", code:'r = dict(ime="Ana", god=25)\n# {"ime": "Ana", "god": 25}', tip:"Kraći zapis: r = {\"ime\": \"Ana\", \"god\": 25}" },
+  { cmd:"bool()", cat:"Konverzija", desc:"Konvertuje vrednost u True ili False. Prazne kolekcije, 0 i None su False.", code:'print(bool(0))     # False\nprint(bool([]))    # False\nprint(bool(42))    # True', tip:"Korisno za proveru da li je promenljiva prazna." },
+  { cmd:"append() / extend()", cat:"Liste", desc:"append() dodaje jedan element na kraj. extend() dodaje sve elemente iz druge kolekcije.", code:'l = [1, 2, 3]\nl.append(4)       # [1, 2, 3, 4]\nl.extend([5, 6])  # [1, 2, 3, 4, 5, 6]', tip:"append([5,6]) dodaje listu kao jedan element!" },
+  { cmd:"insert() / remove()", cat:"Liste", desc:"insert(i, x) ubacuje na poziciju i. remove(x) briše prvu pojavu x.", code:'l = [1, 2, 3]\nl.insert(1, 99)   # [1, 99, 2, 3]\nl.remove(99)      # [1, 2, 3]', tip:"remove() baca ValueError ako element ne postoji." },
+  { cmd:"pop()", cat:"Liste", desc:"Uklanja i vraća element na poziciji (podrazumevano: zadnji).", code:'l = [10, 20, 30]\nx = l.pop()    # x=30, l=[10,20]', tip:"pop() bez argumenta = stack (LIFO) struktura." },
+  { cmd:"sort() / sorted()", cat:"Liste", desc:"sort() menja listu na mestu. sorted() vraća novu sortiranu listu.", code:'l = [3,1,4]\nl.sort()              # [1,3,4]\nn = sorted(l, reverse=True)', tip:"sorted() radi na svim iterabilnim objektima." },
+  { cmd:"index() / count()", cat:"Liste", desc:"index(x) vraća poziciju prvog x. count(x) broji pojave x.", code:'l = [1, 2, 3, 2]\nprint(l.index(2))   # 1\nprint(l.count(2))   # 2', tip:"index() baca ValueError ako nema elementa." },
+  { cmd:".split() / .join()", cat:"Stringovi", desc:"split() deli string u listu. join() spaja listu u jedan string.", code:'r = "Ana,Marko".split(",")  # ["Ana","Marko"]\ns = " - ".join(["Ana","Marko"])  # "Ana - Marko"', tip:"Moćna kombinacija za obradu teksta i CSV-a." },
+  { cmd:".strip() / .replace()", cat:"Stringovi", desc:"strip() uklanja razmake sa krajeva. replace() zamenjuje sve pojave podstringa.", code:'r = "  hello  ".strip()       # "hello"\ns = "aabaa".replace("a","x") # "xxbxx"', tip:"lstrip() i rstrip() za jednu stranu." },
+  { cmd:".upper() / .lower()", cat:"Stringovi", desc:"Konvertuju karaktere u velika ili mala slova.", code:'r = "Python"\nprint(r.upper())  # "PYTHON"\nprint(r.lower())  # "python"', tip:"Korisno za case-insensitive poređenja." },
+  { cmd:".startswith() / .endswith()", cat:"Stringovi", desc:"Proveravaju da li string počinje ili završava datim podnizom.", code:'r = "hello.py"\nprint(r.endswith(".py"))  # True', tip:"Može primiti tuple sa više opcija." },
+  { cmd:"f-string", cat:"Stringovi", desc:"Formatira string umetanjem vrednosti direktno u tekst — najmoderniji način.", code:'ime = "Ana"\ngod = 25\nprint(f"Ime: {ime}, god: {god}")\nprint(f"Kvadrat: {god**2}")', tip:"Može sadržati izraze unutar {} zagrada!" },
+  { cmd:"open()", cat:"Fajlovi", desc:"Otvara fajl za čitanje, pisanje ili dodavanje.", code:"with open('fajl.txt', 'r') as f:\n    sadrzaj = f.read()\n\nwith open('izlaz.txt', 'w') as f:\n    f.write('Zdravo!')", tip:"Uvek koristi 'with' — automatski zatvara fajl." },
+  { cmd:"read() / readlines()", cat:"Fajlovi", desc:"read() čita ceo fajl. readlines() vraća listu linija.", code:"with open('test.txt') as f:\n    tekst = f.read()\n\nwith open('test.txt') as f:\n    linije = f.readlines()", tip:"Za velike fajlove iteriraj: for linija in f:" },
+  { cmd:"write() / writelines()", cat:"Fajlovi", desc:"write() upisuje string. writelines() upisuje listu stringova.", code:"with open('izlaz.txt', 'w') as f:\n    f.write('Linija 1\\n')\n    f.writelines(['L2\\n','L3\\n'])", tip:"Dodaj \\n ručno između linija!" },
+  { cmd:"def", cat:"Funkcije", desc:"Definiše funkciju — blok koda koji se može ponovo koristiti.", code:'def pozdrav(ime, puta=1):\n    for _ in range(puta):\n        print(f"Zdravo, {ime}!")', tip:"Parametri sa = imaju podrazumevanu vrednost." },
+  { cmd:"return", cat:"Funkcije", desc:"Vraća vrednost iz funkcije i prekida njeno izvršavanje.", code:'def saberi(a, b):\n    return a + b\n\nrez = saberi(3, 4)  # 7', tip:"Možeš vratiti više vrednosti: return a, b" },
+  { cmd:"lambda", cat:"Funkcije", desc:"Pravi anonimnu funkciju u jednom redu.", code:'kvadrat = lambda x: x**2\nprint(kvadrat(5))   # 25', tip:"Za složenije funkcije koristi def umesto lambda." },
+  { cmd:"*args / **kwargs", cat:"Funkcije", desc:"*args prima promenljiv broj pozicionih argumenata. **kwargs prima ključ=vrednost argumente.", code:'def zbir(*args):\n    return sum(args)\nprint(zbir(1,2,3,4))  # 10', tip:"* i ** su obavezni, ali args/kwargs su konvencija." },
+  { cmd:"if / elif / else", cat:"Kontrola toka", desc:"Uslovna grananja — izvršavaju kod zavisno od uslova.", code:'x = 15\nif x > 20:     print("veliko")\nelif x > 10:   print("srednje")\nelse:          print("malo")', tip:"Uvlačenje (indent) je obavezno u Pythonu!" },
+  { cmd:"for petlja", cat:"Kontrola toka", desc:"Iterira kroz svaki element kolekcije.", code:'for voce in ["jabuka","kruška"]:\n    print(voce)\n\nfor i, v in enumerate([10,20]):\n    print(f"{i}: {v}")', tip:"enumerate() daje i indeks i vrednost." },
+  { cmd:"while petlja", cat:"Kontrola toka", desc:"Ponavlja blok dok je uslov True.", code:'n = 0\nwhile n < 5:\n    print(n)\n    n += 1', tip:"break prekida, continue preskače iteraciju." },
+  { cmd:"try / except / finally", cat:"Kontrola toka", desc:"Hvata greške i sprečava pad programa. finally se uvek izvršava.", code:'try:\n    x = int(input("Broj: "))\nexcept ValueError:\n    print("Nije broj!")\nfinally:\n    print("Gotovo.")', tip:"Hvataj specifične greške, ne samo Exception." },
+  { cmd:"import / from", cat:"Moduli", desc:"Učitava module. from...import uvozi samo određenu funkciju.", code:'import math\nprint(math.sqrt(16))\n\nfrom math import pi\nprint(pi)', tip:"Alias (as) skraćuje duge nazive modula." },
+  { cmd:"os modul", cat:"Moduli", desc:"Pristup operativnom sistemu: fajlovi, direktorijumi, putanje.", code:"import os\nprint(os.getcwd())\nos.makedirs('novi_dir', exist_ok=True)\nprint(os.listdir('.'))", tip:"os.path.join() automatski koristi tačan separator." },
+  { cmd:"sys modul", cat:"Moduli", desc:"Pristup Python interpretatoru: argumenti, putanje, verzija.", code:'import sys\nprint(sys.argv)\nprint(sys.version)\nsys.exit(0)', tip:"sys.argv[0] je uvek ime skripte." },
+  { cmd:"class", cat:"OOP", desc:"Definiše klasu — šablon za pravljenje objekata.", code:'class Auto:\n    def __init__(self, marka):\n        self.marka = marka\n    def info(self):\n        return f"Auto: {self.marka}"\n\na = Auto("BMW")', tip:"__init__ je konstruktor." },
+  { cmd:"__str__ / __repr__", cat:"OOP", desc:"__str__ definiše šta print() prikazuje. __repr__ definiše prikaz za debugging.", code:'class Tacka:\n    def __init__(self, x, y): self.x,self.y=x,y\n    def __str__(self): return f"({self.x},{self.y})"', tip:"Uvek definiši __repr__ za lakše debugovanje." },
+  { cmd:"map() / filter()", cat:"Funkcionalno", desc:"map() primenjuje funkciju na svaki element. filter() zadržava elemente za koje je True.", code:'br = [1,2,3,4,5]\nkv = list(map(lambda x: x**2, br))\nparni = list(filter(lambda x: x%2==0, br))', tip:"List comprehension je često čitljivija alternativa." },
+  { cmd:"zip() / enumerate()", cat:"Funkcionalno", desc:"zip() spaja liste u torke. enumerate() dodaje indeks uz svaki element.", code:'i = ["Ana","Marko"]\ng = [25, 30]\nfor ime, god in zip(i,g):\n    print(f"{ime}: {god}")', tip:"zip() staje kada najkraća lista završi." },
+  { cmd:"List comprehension", cat:"Funkcionalno", desc:"Kompaktna sintaksa za pravljenje liste sa opcionalnim filtriranjem.", code:'kv = [x**2 for x in range(10)]\nparni = [x for x in range(10) if x%2==0]', tip:"Radi i za dict: {k:v for k,v in parovi}" },
+
+  { cmd:"dict.get() / dict.keys()", cat:"Rečnici", desc:"get() bezbedno čita vrednost (bez greške ako ne postoji). keys()/values()/items() vraćaju poglede na rečnik.", code:'r = {"ime":"Ana","god":25}\nprint(r.get("grad","N/A"))\nfor k,v in r.items():\n    print(k, v)', tip:"get() sa default vrednošću sprečava KeyError." },
+  { cmd:"dict.update() / pop()", cat:"Rečnici", desc:"update() dodaje/menja više parova odjednom. pop() uklanja i vraća vrednost po ključu.", code:'r = {"a":1,"b":2}\nr.update({"c":3,"a":10})\nval = r.pop("b")  # 2', tip:"update() prima i drugi rečnik i keyword argumente." },
+  { cmd:"defaultdict", cat:"Rečnici", desc:"Rečnik koji automatski kreira podrazumevanu vrednost za nepostojeće ključeve.", code:'from collections import defaultdict\nbr = defaultdict(int)\nfor slovo in "abracadabra":\n    br[slovo] += 1', tip:"Eliminiše potrebu za if key in dict proverama." },
+  { cmd:"Counter", cat:"Rečnici", desc:"Specijalizovani rečnik za brojanje pojavljivanja elemenata.", code:'from collections import Counter\nc = Counter("abracadabra")\nprint(c.most_common(2))', tip:"most_common(n) vraća n najčešćih elemenata." },
+
+  { cmd:"try / except (više grešaka)", cat:"Greške", desc:"Hvatanje više različitih tipova grešaka odvojeno, sa specifičnim porukama za svaku.", code:'try:\n    x = 10 / int(input())\nexcept ZeroDivisionError:\n    print("Ne deli sa nulom!")\nexcept ValueError:\n    print("Mora biti broj!")', tip:"Specifične greške hvataj pre opštih (Exception)." },
+  { cmd:"raise", cat:"Greške", desc:"Ručno baca grešku (exception) kada nešto nije ispravno u logici programa.", code:'def proveri_godine(g):\n    if g < 0:\n        raise ValueError("Godine ne mogu biti negativne")\n    return g', tip:"Custom poruke u raise() olakšavaju debagovanje." },
+  { cmd:"assert", cat:"Greške", desc:"Proverava da li je uslov tačan — ako nije, baca AssertionError. Koristi se za testiranje pretpostavki.", code:'def kvadrat(x):\n    assert x >= 0, "x mora biti pozitivan"\n    return x**2\n\nassert kvadrat(4) == 16', tip:"Odlično za brze provere tokom razvoja." },
+  { cmd:"custom Exception klasa", cat:"Greške", desc:"Pravljenje sopstvene klase greške nasleđivanjem od Exception za jasnije error handling.", code:'class NedovoljnoSredstavaError(Exception):\n    pass\n\ndef podigni(stanje, iznos):\n    if iznos > stanje:\n        raise NedovoljnoSredstavaError("Nema dovoljno!")', tip:"Custom greške čine kod čitljivijim u velikim projektima." },
+
+  { cmd:"re.search() / re.match()", cat:"Regex", desc:"Regularni izrazi za pretragu obrazaca u tekstu. search() traži bilo gde, match() samo na početku.", code:'import re\nr = re.search(r"\\d+", "Ima 42 jabuke")\nprint(r.group())  # "42"', tip:"\\d=cifra, \\w=slovo/broj, +=jedan ili više." },
+  { cmd:"re.findall() / re.sub()", cat:"Regex", desc:"findall() vraća sve poklapanja kao listu. sub() zamenjuje poklapanja novim tekstom.", code:'import re\nbr = re.findall(r"\\d+", "a1 b22 c333")\nciscen = re.sub(r"\\s+", " ", "previse   razmaka")', tip:"Koristi raw stringove (r\"...\") za regex obrasce." },
+
+  { cmd:"map() napredno", cat:"Iteratori", desc:"Primenjuje funkciju na svaki element iterabilnog objekta i vraća iterator (lenjo izvršavanje).", code:'imena = ["ana","marko","iva"]\nveliko = list(map(str.upper, imena))\n# ["ANA","MARKO","IVA"]', tip:"map() je brži od for petlje za jednostavne transformacije." },
+  { cmd:"itertools.chain()", cat:"Iteratori", desc:"Spaja više iterabilnih objekata u jedan kontinuirani niz bez kreiranja nove liste.", code:'from itertools import chain\na = [1,2,3]\nb = [4,5,6]\nfor x in chain(a,b):\n    print(x)', tip:"Memorijski efikasnije od a + b za velike liste." },
+  { cmd:"generator (yield)", cat:"Iteratori", desc:"Funkcija koja vraća vrednosti jednu po jednu, štedeći memoriju — ne čuva sve odjednom.", code:'def brojac(n):\n    i = 0\n    while i < n:\n        yield i\n        i += 1\n\nfor x in brojac(5):\n    print(x)', tip:"Generatori su idealni za rad sa velikim podacima." },
+  { cmd:"enumerate() napredno", cat:"Iteratori", desc:"Dodaje brojač uz iteraciju kolekcije — vraća torke (indeks, vrednost).", code:'for i, slovo in enumerate("abc", start=1):\n    print(i, slovo)\n# 1 a / 2 b / 2 c', tip:"start= parametar menja početni indeks (default 0)." },
+
+  { cmd:"datetime.now()", cat:"Datum/vreme", desc:"Dobavlja trenutni datum i vreme. Osnova za sve operacije sa vremenom u Python-u.", code:'from datetime import datetime\nsada = datetime.now()\nprint(sada.strftime("%d.%m.%Y %H:%M"))', tip:"strftime formatira datum u željeni string oblik." },
+  { cmd:"timedelta", cat:"Datum/vreme", desc:"Predstavlja razliku između dva datuma/vremena — koristi se za računanje i pomeranje datuma.", code:'from datetime import datetime, timedelta\nsutra = datetime.now() + timedelta(days=1)\nprint(sutra.strftime("%d.%m.%Y"))', tip:"timedelta podržava days, hours, minutes, seconds." },
+
+  { cmd:"json.dumps() / loads()", cat:"Moduli", desc:"dumps() konvertuje Python objekat u JSON tekst. loads() parsira JSON tekst nazad u Python objekat.", code:'import json\npodaci = {"ime":"Ana","god":25}\ntekst = json.dumps(podaci)\nnazad = json.loads(tekst)', tip:"json.dump()/load() rade direktno sa fajlovima." },
+  { cmd:"random modul", cat:"Moduli", desc:"Generiše nasumične brojeve i bira nasumične elemente — koristan za igre, simulacije, testiranje.", code:'import random\nprint(random.randint(1,10))\nprint(random.choice(["a","b","c"]))\nrandom.shuffle([1,2,3])', tip:"random.seed(broj) pravi ponovljive (deterministic) rezultate." },
+  { cmd:"argparse", cat:"Moduli", desc:"Obrađuje argumente komandne linije za skripte — pravi profesionalne CLI alate.", code:'import argparse\np = argparse.ArgumentParser()\np.add_argument("--ime")\nargs = p.parse_args()\nprint(args.ime)', tip:"Koristi se kad skriptu pokrećeš sa python skripta.py --ime Ana" },
+
+  { cmd:"@property", cat:"OOP", desc:"Dekorator koji omogućava da se metoda poziva kao atribut — kontroliše pristup podacima u klasi.", code:'class Krug:\n    def __init__(self, r):\n        self._r = r\n    @property\n    def povrsina(self):\n        return 3.14 * self._r**2', tip:"Koristi se kad želiš da izračunata vrednost izgleda kao obična promenljiva." },
+  { cmd:"nasleđivanje (inheritance)", cat:"OOP", desc:"Klasa nasleđuje atribute i metode druge klase, omogućavajući ponovno korišćenje koda.", code:'class Zivotinja:\n    def zvuk(self): return "..."\n\nclass Pas(Zivotinja):\n    def zvuk(self): return "Vau!"', tip:"super() poziva metode roditeljske klase." },
+  { cmd:"staticmethod / classmethod", cat:"OOP", desc:"staticmethod ne koristi self/cls. classmethod prima klasu (cls) umesto instance — koristi se za alternativne konstruktore.", code:'class Krug:\n    @staticmethod\n    def info():\n        return "Geometrijski oblik"\n    @classmethod\n    def jedinicni(cls):\n        return cls(1)', tip:"classmethod je čest za pravljenje objekata na alternativan način." },
+
+  { cmd:"with (context manager)", cat:"Kontrola toka", desc:"Automatski upravlja resursima (otvaranje/zatvaranje) — garantuje čišćenje čak i ako dođe do greške.", code:"with open('fajl.txt') as f:\n    sadrzaj = f.read()\n# fajl je automatski zatvoren ovde", tip:"Koristi se za fajlove, konekcije ka bazi, lock-ove." },
+  { cmd:"match / case", cat:"Kontrola toka", desc:"Pattern matching (od Python 3.10) — moderna alternativa dugačkim if/elif lancima.", code:'def opis(x):\n    match x:\n        case 1: return "jedan"\n        case 2 | 3: return "dva ili tri"\n        case _: return "ostalo"', tip:"case _ je 'default' slučaj, kao else." },
+  { cmd:"walrus operator (:=)", cat:"Kontrola toka", desc:"Dodeljuje vrednost promenljivoj unutar izraza — štedi liniju koda u petljama i uslovima.", code:'podaci = [1,2,3,4,5]\nif (n := len(podaci)) > 3:\n    print(f"Lista ima {n} elemenata")', tip:"Uveden u Python 3.8, koristan u while petljama sa input()." },
+];
+
+// ─── STATE ───
+let allData = [];
+let learned = {};
+let activeFilter = "Sve";
+let quizQ = [], quizIdx = 0, quizScore = 0;
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('pyvodic_custom');
+    const custom = saved ? JSON.parse(saved) : [];
+    allData = [...DEFAULT_DATA, ...custom];
+    learned = JSON.parse(localStorage.getItem('pyvodic_learned') || '{}');
+  } catch(e) {
+    allData = [...DEFAULT_DATA];
+    learned = {};
+  }
+}
+function saveCustom() {
+  const custom = allData.slice(DEFAULT_DATA.length);
+  localStorage.setItem('pyvodic_custom', JSON.stringify(custom));
+}
+function saveLearned() {
+  localStorage.setItem('pyvodic_learned', JSON.stringify(learned));
+}
+
+// ─── NAVIGATION ───
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const tabs = ['komande','sandbox','kviz','napredak','bedzevi','dodaj'];
+  document.querySelectorAll('.nav-tab')[tabs.indexOf(id)].classList.add('active');
+  if (id === 'napredak') renderNapredak();
+  if (id === 'komande') renderKomande();
+  if (id === 'dodaj') renderAddCats();
+  if (id === 'bedzevi') renderBadges();
+  updateHeader();
+}
+
+// ─── HEADER ───
+function updateHeader() {
+  const total = allData.length;
+  const lrn = Object.values(learned).filter(Boolean).length;
+  document.getElementById('hdr-learned').textContent = lrn;
+  document.getElementById('hdr-total').textContent = total;
+}
+
+// ─── KOMANDE ───
+function getCats() {
+  return ['Sve', ...new Set(allData.map(d => d.cat))];
+}
+
+function renderFilters() {
+  const cats = getCats();
+  const el = document.getElementById('filters');
+  el.style.display = 'flex';
+  el.style.flexWrap = 'wrap';
+  el.style.gap = '8px';
+  el.innerHTML = cats.map(c =>
+    `<button class="filter-btn ${c===activeFilter?'active':''}" onclick="setFilter('${c}')">${c}</button>`
+  ).join('');
+}
+
+function setFilter(c) {
+  activeFilter = c;
+  renderKomande();
+}
+
+function renderKomande() {
+  renderFilters();
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const filtered = allData.filter((d, i) => {
+    const matchCat = activeFilter === 'Sve' || d.cat === activeFilter;
+    const matchQ = !q || d.cmd.toLowerCase().includes(q) || d.desc.toLowerCase().includes(q) || d.cat.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+  document.getElementById('res-count').textContent = filtered.length + ' komandi';
+  const grid = document.getElementById('cmd-grid');
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty"><span>🔍</span>Nema rezultata.</div>';
+    return;
+  }
+  grid.innerHTML = filtered.map(d => {
+    const idx = allData.indexOf(d);
+    const col = catColor(d.cat);
+    const isLearned = learned[d.cmd] ? 'learned' : '';
+    const isCustom = idx >= DEFAULT_DATA.length;
+    return `
+    <div class="cmd-card ${isLearned}" id="card-${idx}">
+      <div class="cmd-header" onclick="toggleCard(${idx})">
+        <div class="cat-dot" style="background:${col.dot}"></div>
+        <div class="cmd-name">${d.cmd}${isCustom ? '<span class="custom-badge">moja</span>' : ''}</div>
+        <div class="cmd-cat" style="background:${col.badge};color:${col.text}">${d.cat}</div>
+        <div class="learn-check">${learned[d.cmd] ? '✓' : ''}</div>
+      </div>
+      <div class="cmd-body">
+        <div class="cmd-desc">${d.desc}</div>
+        <div class="code-block">${d.code}</div>
+        ${d.tip ? `<div class="cmd-tip">💡 ${d.tip}</div>` : ''}
+        <div class="cmd-actions">
+          <button class="btn-sm primary" onclick="toggleLearned(event,'${escQ(d.cmd)}',${idx})">${learned[d.cmd] ? '✓ Naučeno' : 'Označi naučeno'}</button>
+          ${isCustom ? `<button class="btn-sm" onclick="deleteKomanda(event,${idx})">🗑 Obriši</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function escQ(s) { return s.replace(/'/g,"\\'").replace(/"/g,"&quot;"); }
+
+function toggleCard(idx) {
+  const card = document.getElementById('card-' + idx);
+  card.classList.toggle('open');
+}
+
+function toggleLearned(e, cmd, idx) {
+  e.stopPropagation();
+  learned[cmd] = !learned[cmd];
+  saveLearned();
+  if (learned[cmd]) bumpStreak();
+  renderKomande();
+  updateHeader();
+}
+
+function deleteKomanda(e, idx) {
+  e.stopPropagation();
+  if (!confirm('Obrisati ovu komandu?')) return;
+  allData.splice(idx, 1);
+  saveCustom();
+  renderKomande();
+  updateHeader();
+}
+
+// ─── QUIZ ───
+function buildQuizQuestions() {
+  const pool = [...allData].sort(() => Math.random() - 0.5).slice(0, Math.min(10, allData.length));
+  return pool.map(d => {
+    const wrong = allData.filter(x => x.cmd !== d.cmd).sort(() => Math.random() - 0.5).slice(0, 3);
+    const opts = [d.desc, ...wrong.map(x => x.desc)].sort(() => Math.random() - 0.5);
+    return { question: `Šta radi: ${d.cmd}`, code: d.code, correct: d.desc, options: opts };
+  });
+}
+
+function startQuiz() {
+  quizQ = buildQuizQuestions();
+  quizIdx = 0;
+  quizScore = 0;
+  document.getElementById('quiz-intro').classList.add('hide');
+  document.getElementById('quiz-result').classList.remove('show');
+  document.getElementById('quiz-active').classList.add('show');
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = quizQ[quizIdx];
+  const pct = (quizIdx / quizQ.length * 100).toFixed(0);
+  document.getElementById('qpbar').style.width = pct + '%';
+  document.getElementById('qnum').textContent = `${quizIdx + 1} / ${quizQ.length}`;
+  document.getElementById('qscore-live').textContent = `✓ ${quizScore}`;
+  document.getElementById('q-question').textContent = q.question;
+  const codeEl = document.getElementById('q-code');
+  if (q.code) { codeEl.style.display = 'block'; codeEl.textContent = q.code; }
+  else { codeEl.style.display = 'none'; }
+  document.getElementById('q-feedback').className = 'quiz-feedback';
+  document.getElementById('q-feedback').innerHTML = '';
+  document.getElementById('btn-next').className = 'btn-next';
+  document.getElementById('q-options').innerHTML = q.options.map(o =>
+    `<button class="quiz-opt" onclick="answerQuiz(this,'${escQ(o)}','${escQ(q.correct)}')">${o}</button>`
+  ).join('');
+}
+
+function answerQuiz(btn, chosen, correct) {
+  document.querySelectorAll('.quiz-opt').forEach(b => b.disabled = true);
+  const fb = document.getElementById('q-feedback');
+  if (chosen === correct) {
+    btn.classList.add('correct');
+    quizScore++;
+    fb.className = 'quiz-feedback show ok';
+    fb.innerHTML = '✅ Tačno!';
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.quiz-opt').forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
+    fb.className = 'quiz-feedback show err';
+    fb.innerHTML = `❌ Netačno. Tačan odgovor: <strong>${correct}</strong>`;
+  }
+  document.getElementById('qscore-live').textContent = `✓ ${quizScore}`;
+  document.getElementById('btn-next').className = 'btn-next show';
+  document.getElementById('btn-next').textContent = quizIdx + 1 < quizQ.length ? 'Sledeće pitanje →' : 'Završi kviz';
+}
+
+function nextQuestion() {
+  quizIdx++;
+  if (quizIdx >= quizQ.length) {
+    document.getElementById('quiz-active').classList.remove('show');
+    const res = document.getElementById('quiz-result');
+    res.classList.add('show');
+    document.getElementById('result-score').textContent = `${quizScore} / ${quizQ.length}`;
+    const pct = Math.round(quizScore / quizQ.length * 100);
+    const msgs = [[80,'Odlično! Pravi Python pro! 🎉'],[60,'Dobro! Malo više vežbe i biće savršeno. 💪'],[0,'Ne brini, vežbanje čini majstora! 📚']];
+    document.getElementById('result-msg').textContent = msgs.find(m => pct >= m[0])[1];
+    bumpQuizzesDone();
+    bumpStreak();
+  } else {
+    showQuestion();
+  }
+}
+
+// ─── NAPREDAK ───
+function renderNapredak() {
+  const total = allData.length;
+  const lrn = Object.values(learned).filter(Boolean).length;
+  const pct = total ? Math.round(lrn / total * 100) : 0;
+  const cats = [...new Set(allData.map(d => d.cat))];
+  document.getElementById('prog-grid').innerHTML = `
+    <div class="prog-card">
+      <div class="prog-card-title">Ukupno naučeno</div>
+      <div class="prog-card-val" style="color:var(--accent2)">${lrn}</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-top:4px">od ${total} komandi</div>
+      <div class="prog-bar-wrap"><div class="prog-bar" style="width:${pct}%;background:var(--accent2)"></div></div>
+    </div>
+    <div class="prog-card">
+      <div class="prog-card-title">Procenat</div>
+      <div class="prog-card-val" style="color:var(--accent)">${pct}%</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-top:4px">završeno</div>
+      <div class="prog-bar-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
+    </div>
+    <div class="prog-card">
+      <div class="prog-card-title">Kategorija</div>
+      <div class="prog-card-val" style="color:var(--accent3)">${cats.length}</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-top:4px">ukupno kategorija</div>
+    </div>
+    <div class="prog-card">
+      <div class="prog-card-title">Dodato komandi</div>
+      <div class="prog-card-val" style="color:var(--accent4)">${allData.length - DEFAULT_DATA.length}</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-top:4px">tvojih komandi</div>
+    </div>
+  `;
+  document.getElementById('cat-progress').innerHTML = cats.map(c => {
+    const inCat = allData.filter(d => d.cat === c);
+    const lrnCat = inCat.filter(d => learned[d.cmd]).length;
+    const pp = inCat.length ? Math.round(lrnCat / inCat.length * 100) : 0;
+    const col = catColor(c);
+    return `
+    <div class="cat-prog-item">
+      <div class="cat-prog-name" style="color:${col.dot}">${c}</div>
+      <div class="cat-prog-bar-wrap"><div class="cat-prog-bar" style="width:${pp}%;background:${col.dot}"></div></div>
+      <div class="cat-prog-num">${lrnCat}/${inCat.length}</div>
+    </div>`;
+  }).join('');
+}
+
+function resetProgress() {
+  if (!confirm('Resetovati sav napredak? Komande neće biti obrisane.')) return;
+  learned = {};
+  saveLearned();
+  renderNapredak();
+  updateHeader();
+}
+
+// ─── DODAJ ───
+function renderAddCats() {
+  const cats = [...new Set(allData.map(d => d.cat))];
+  const sel = document.getElementById('f-cat');
+  sel.innerHTML = '<option value="">-- Odaberi kategoriju --</option>' +
+    cats.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function addKomanda() {
+  const cmd = document.getElementById('f-cmd').value.trim();
+  const catSel = document.getElementById('f-cat').value;
+  const catNew = document.getElementById('f-newcat').value.trim();
+  const cat = catNew || catSel;
+  const desc = document.getElementById('f-desc').value.trim();
+  const code = document.getElementById('f-code').value.trim();
+  const tip = document.getElementById('f-tip').value.trim();
+  if (!cmd || !cat || !desc || !code) { alert('Molim te popuni sva obavezna polja (*)'); return; }
+  if (allData.find(d => d.cmd === cmd)) { alert('Komanda sa tim imenom već postoji!'); return; }
+  allData.push({ cmd, cat, desc, code, tip });
+  saveCustom();
+  document.getElementById('f-cmd').value = '';
+  document.getElementById('f-cat').value = '';
+  document.getElementById('f-newcat').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-code').value = '';
+  document.getElementById('f-tip').value = '';
+  const s = document.getElementById('add-success');
+  s.classList.add('show');
+  setTimeout(() => s.classList.remove('show'), 3000);
+  updateHeader();
+}
+
+// ─── TEMA ───
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'light' ? null : 'light';
+  if (next) document.documentElement.setAttribute('data-theme', next);
+  else document.documentElement.removeAttribute('data-theme');
+  localStorage.setItem('pyvodic_theme', next || 'dark');
+}
+function loadTheme() {
+  const t = localStorage.getItem('pyvodic_theme');
+  if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+}
+
+// ─── SANDBOX ───
+const SNIPPETS = {
+  petlja: `for i in range(1, 6):
+    print(f"Krug broj {i}")
+
+ukupno = 0
+for x in [10, 20, 30]:
+    ukupno += x
+print("Zbir:", ukupno)`,
+  funkcija: `def pozdrav(ime, jezik="srpski"):
+    if jezik == "srpski":
+        return f"Zdravo, {ime}!"
+    return f"Hello, {ime}!"
+
+print(pozdrav("Boris"))
+print(pozdrav("John", "engleski"))`,
+  recnik: `student = {"ime": "Ana", "ocena": 9, "polozio": True}
+
+for kljuc, vrednost in student.items():
+    print(f"{kljuc}: {vrednost}")
+
+print("Ocena studenta:", student["ocena"])`,
+  uslov: `ocena = 8
+
+if ocena >= 9:
+    print("Odlican")
+elif ocena >= 7:
+    print("Vrlo dobar")
+elif ocena >= 6:
+    print("Dobar")
+else:
+    print("Nedovoljan")`,
+  lista: `brojevi = list(range(1, 21))
+
+parni = [b for b in brojevi if b % 2 == 0]
+kvadrati = [b**2 for b in brojevi if b <= 5]
+
+print("Parni:", parni)
+print("Kvadrati:", kvadrati)`
+};
+
+function loadSnippet(name) {
+  document.getElementById('sandbox-code').value = SNIPPETS[name];
+}
+
+function pySimRun(code) {
+  const lines = [];
+  const fakePrint = (...args) => lines.push(args.map(a => {
+    if (Array.isArray(a)) return `[${a.join(', ')}]`;
+    if (typeof a === 'boolean') return a ? 'True' : 'False';
+    if (a === null || a === undefined) return 'None';
+    if (typeof a === 'object') return JSON.stringify(a);
+    return String(a);
+  }).join(' '));
+  try {
+    let mod = code
+      .replace(/True/g, 'true').replace(/False/g, 'false').replace(/None/g, 'null')
+      .replace(/print\s*\(/g, '__p__(')
+      .replace(/input\s*\([^)]*\)/g, '"unos_simuliran"')
+      .replace(/f"([^"]*)"/g, (m, inner) => '`' + inner.replace(/\{([^}]+)\}/g, '${$1}') + '`')
+      .replace(/f'([^']*)'/g, (m, inner) => '`' + inner.replace(/\{([^}]+)\}/g, '${$1}') + '`')
+      .replace(/(\w+)\s*\*\*\s*(\w+|\d+)/g, 'Math.pow($1,$2)');
+    const fn = new Function('__p__', mod);
+    fn(fakePrint);
+    return { ok: true, out: lines.join('\n') || '(program nije ništa ispisao)' };
+  } catch (e) {
+    return { ok: false, out: `Greška: ${e.message}\n\nSavet: Proveri sintaksu — sandbox podržava osnovne Python konstrukcije (print, for, if, funkcije, f-stringove, liste).` };
+  }
+}
+
+function runSandbox() {
+  const code = document.getElementById('sandbox-code').value;
+  const out = document.getElementById('sandbox-output');
+  out.textContent = '⏳ Izvršavanje...';
+  out.className = 'sandbox-output';
+  setTimeout(() => {
+    const r = pySimRun(code);
+    out.textContent = r.out;
+    out.className = 'sandbox-output' + (r.ok ? '' : ' err');
+    bumpSandboxRuns();
+    if (r.ok) { bumpStreak(); }
+  }, 300);
+}
+
+// ─── BEDZEVI ───
+const BADGES = [
+  { id:'prva_komanda', icon:'🌱', name:'Prvi korak', desc:'Označi prvu komandu kao naučenu', check: () => Object.values(learned).filter(Boolean).length >= 1 },
+  { id:'deset_komandi', icon:'📘', name:'Marljivi učenik', desc:'Nauči 10 komandi', check: () => Object.values(learned).filter(Boolean).length >= 10 },
+  { id:'dvadeset_komandi', icon:'🎓', name:'Python student', desc:'Nauči 20 komandi', check: () => Object.values(learned).filter(Boolean).length >= 20 },
+  { id:'sve_komande', icon:'👑', name:'Python majstor', desc:'Nauči sve dostupne komande', check: () => allData.length > 0 && Object.values(learned).filter(Boolean).length >= allData.length },
+  { id:'prvi_kviz', icon:'🧠', name:'Prvi kviz', desc:'Završi jedan kviz', check: () => parseInt(localStorage.getItem('pyvodic_quizzes_done') || '0') >= 1 },
+  { id:'kviz_pet', icon:'🏅', name:'Kviz veteran', desc:'Završi 5 kvizova', check: () => parseInt(localStorage.getItem('pyvodic_quizzes_done') || '0') >= 5 },
+  { id:'sandbox_prvi', icon:'⚡', name:'Prvi kod', desc:'Pokreni kod u Sandbox-u', check: () => parseInt(localStorage.getItem('pyvodic_sandbox_runs') || '0') >= 1 },
+  { id:'sandbox_deset', icon:'🔥', name:'Code runner', desc:'Pokreni kod 10 puta u Sandbox-u', check: () => parseInt(localStorage.getItem('pyvodic_sandbox_runs') || '0') >= 10 },
+  { id:'dodao_komandu', icon:'✍️', name:'Doprinosilac', desc:'Dodaj sopstvenu komandu', check: () => allData.length > DEFAULT_DATA.length },
+  { id:'sve_kategorije', icon:'🗂️', name:'Istraživač', desc:'Nauči bar jednu komandu iz svake kategorije', check: () => {
+      const cats = [...new Set(allData.map(d => d.cat))];
+      return cats.every(c => allData.some(d => d.cat === c && learned[d.cmd]));
+  }},
+  { id:'streak_tri', icon:'🔥', name:'3 dana zaredom', desc:'Vežbaj 3 dana zaredom', check: () => getStreak() >= 3 },
+  { id:'streak_sedam', icon:'🚀', name:'Nedelja posvećenosti', desc:'Vežbaj 7 dana zaredom', check: () => getStreak() >= 7 },
+];
+
+function getStreak() {
+  return parseInt(localStorage.getItem('pyvodic_streak') || '0');
+}
+
+function bumpStreak() {
+  const today = new Date().toDateString();
+  const last = localStorage.getItem('pyvodic_last_active');
+  if (last === today) return;
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  let streak = getStreak();
+  streak = (last === yesterday) ? streak + 1 : 1;
+  localStorage.setItem('pyvodic_streak', streak);
+  localStorage.setItem('pyvodic_last_active', today);
+}
+
+function bumpSandboxRuns() {
+  const n = parseInt(localStorage.getItem('pyvodic_sandbox_runs') || '0') + 1;
+  localStorage.setItem('pyvodic_sandbox_runs', n);
+}
+
+function bumpQuizzesDone() {
+  const n = parseInt(localStorage.getItem('pyvodic_quizzes_done') || '0') + 1;
+  localStorage.setItem('pyvodic_quizzes_done', n);
+}
+
+function renderBadges() {
+  bumpStreak();
+  document.getElementById('streak-num').textContent = `${getStreak()} ${getStreak() === 1 ? 'dan' : 'dana'}`;
+  document.getElementById('badges-grid').innerHTML = BADGES.map(b => {
+    const unlocked = b.check();
+    return `
+    <div class="badge-card ${unlocked ? 'unlocked' : 'locked'}">
+      <span class="b-icon">${b.icon}</span>
+      <div class="b-name">${b.name}</div>
+      <div class="b-desc">${b.desc}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── INIT ───
+loadTheme();
+loadState();
+renderKomande();
+updateHeader();
+</script>
+</body>
+</html>
